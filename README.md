@@ -65,13 +65,6 @@ Developed on Debian Squeeze 6.0.10
 
 I hope that this work may be of help to someone!
 enjoy yourself
-beppe
-
-giuseppe costanzi 
-aka 1966bc
-mailto[giuseppe.costanzi@gmail.com]
-Location: Milky Way Solar System Third Planet (Earth) Italy Rome.
-
 
 
 
