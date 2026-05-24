@@ -21,6 +21,8 @@ import traceback
 import wx
 
 from engine import Engine
+from controller import Controller
+from presenters import MainPresenter
 import frames.main
 
 
@@ -46,7 +48,10 @@ class PyggyBank(wx.App):
 
         self.SetAppName("PyggyBank")
 
+        # dependency injection: engine (data source) -> Controller -> Presenter -> View
         self.engine = Engine()
+        self.controller = Controller(self.engine)
+        self.presenter = MainPresenter(self.controller)
 
         sys.excepthook = ExceptionHook
 
@@ -59,7 +64,8 @@ class PyggyBank(wx.App):
             return False
 
         try:
-            obj = frames.main.MainFrame()
+            obj = frames.main.MainFrame(self.presenter)
+            self.presenter.set_view(obj)
             self.SetTopWindow(obj)
             obj.OnOpen()
             obj.Show()

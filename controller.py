@@ -34,7 +34,8 @@ class Controller:
             return '%'
         return 1 if value else 0
 
-    def _flow_args(self, f: FlowFilter) -> tuple:
+    def flow_args(self, f: FlowFilter) -> tuple:
+        """Translate a FlowFilter into the LIKE arguments of the flows queries."""
         return (self._flag(f.flow),
                 self._flag(f.settled),
                 self._flag(f.enabled),
@@ -44,11 +45,11 @@ class Controller:
 
     def get_flows(self, f: FlowFilter) -> List[Dict[str, Any]]:
         """Return the events list (for the main grid) matching the filter."""
-        return self.db.read(True, self.db.dict_queries['flows'], self._flow_args(f)) or []
+        return self.db.read(True, self.db.dict_queries['flows'], self.flow_args(f)) or []
 
     def get_report_rows(self, f: FlowFilter) -> List[Dict[str, Any]]:
         """Return the rows for the PDF report matching the filter."""
-        return self.db.read(True, self.db.dict_queries['report'], self._flow_args(f)) or []
+        return self.db.read(True, self.db.dict_queries['report'], self.flow_args(f)) or []
 
     def oldest_issued(self) -> Optional[Any]:
         """Return the oldest 'issued' date in the events table, or None."""

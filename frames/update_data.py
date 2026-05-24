@@ -194,7 +194,7 @@ class Dialog(wx.Dialog):
                     sql = wx.GetApp().engine.build_sql('events', 'insert')
 
                 wx.GetApp().engine.write(sql, args)
-                self.GetParent().get_args()
+                self.GetParent().reload()
                 self.OnClick(self.FindWindowById(wx.ID_CLOSE))
 
             else:

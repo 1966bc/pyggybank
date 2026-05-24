@@ -9,7 +9,7 @@ database. The presenter is driven by a fake controller and a fake view.
 import datetime
 
 from models import FlowFilter
-from presenters import MainPresenter
+from presenters import MainPresenter, MainView
 
 
 SAMPLE = [
@@ -54,6 +54,11 @@ def make(rows=SAMPLE):
     v = FakeView()
     p.set_view(v)
     return p, c, v
+
+
+def test_fakeview_satisfies_view_contract():
+    # the presenter depends on the MainView protocol, not on a concrete class
+    assert isinstance(FakeView(), MainView)
 
 
 def test_open_sets_start_date_and_loads():

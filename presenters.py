@@ -12,9 +12,23 @@ Controller (dependency injection).
 """
 
 import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Tuple, runtime_checkable
 
 from models import FlowFilter
+
+
+@runtime_checkable
+class MainView(Protocol):
+    """
+    Contract the MainPresenter requires of its view.
+
+    The concrete wxPython MainFrame implements it structurally; tests provide a
+    FakeView. The presenter depends on this abstraction, never on wxPython.
+    """
+
+    def show_events(self, count: int, totals: Dict[str, float]) -> None:
+        """Render `count` rows (pulled back via the presenter) and the totals."""
+        ...
 
 
 class MainPresenter:
@@ -33,13 +47,13 @@ class MainPresenter:
 
     def __init__(self, controller) -> None:
         self.controller = controller
-        self.view = None
+        self.view: Optional[MainView] = None
         self.filter = FlowFilter()
         self.rows: List[Dict[str, Any]] = []
         self._display: List[Tuple[str, ...]] = []
         self.totals: Dict[str, float] = {'in': 0, 'out': 0, 'wallet': 0}
 
-    def set_view(self, view) -> None:
+    def set_view(self, view: MainView) -> None:
         self.view = view
 
     # ------------------------------------------------------------------ #
@@ -77,6 +91,26 @@ class MainPresenter:
 
     def event_id_at(self, row: int) -> int:
         return self.rows[row]['event_id']
+
+    # ------------------------------------------------------------------ #
+    # data for the view's dialogs / combos / report
+    # ------------------------------------------------------------------ #
+    def get_event(self, row: int) -> Optional[Dict[str, Any]]:
+        """Full record for the row, to populate the edit dialog."""
+        return self.controller.get_event(self.event_id_at(row))
+
+    def categories(self) -> List[Dict[str, Any]]:
+        return self.controller.list_enabled_categories()
+
+    def suppliers(self) -> List[Dict[str, Any]]:
+        return self.controller.list_enabled_suppliers()
+
+    def report_rows(self) -> List[Dict[str, Any]]:
+        return self.controller.get_report_rows(self.filter)
+
+    def report_args(self) -> tuple:
+        """Legacy 6-tuple consumed by reports.rpt_flows.GeneratePDF."""
+        return self.controller.flow_args(self.filter)
 
     # ------------------------------------------------------------------ #
     # actions
