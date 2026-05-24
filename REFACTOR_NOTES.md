@@ -7,7 +7,7 @@
 - ✅ N7 — God Object: export XLS estratto in `exporters.XlsExporter`
 - ✅ N2/N3 — dialoghi via Controller (dati per nome, dict); rinominati
   `update_filter`→`lookup_editor`, `filters`→`lookup_manager`
-- ⏳ N1 — SQL cablato: `dict_queries` → `queries.json`
+- ✅ N1 — SQL fuori dal codice: `queries.json` caricato da Engine
 - ⏳ N4/N5 — filtri sovraccarichi (combo polimorfica, stack filtri)
 - ⏳ N7-bis — `GeneratePDF` pesca ancora da `app.engine` (nomi/logo)
 - ⏳ docs/test: README 3.0, espandere pytest
