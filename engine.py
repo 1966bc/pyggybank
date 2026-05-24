@@ -16,6 +16,8 @@ Version: 3.0
 """
 
 import os
+import sys
+import json
 import datetime
 import traceback
 import subprocess
@@ -55,29 +57,8 @@ class Engine(DBMS, metaclass=_EngineMeta):
             database = self.get_file("pyggy.db")
         super().__init__(database=database, autocommit=autocommit)
 
-        # domain SQL (column aliases keep dict keys clean)
-        self.dict_queries: Dict[str, str] = {
-            'flows': "SELECT event_id, flow, supplier, category, settled,"
-                     " reference, bill,"
-                     " strftime('%d-%m-%Y', issued) AS issued"
-                     " FROM flows"
-                     " WHERE flow LIKE ? AND settled LIKE ? AND enable LIKE ?"
-                     " AND supplier_id LIKE ? AND category_id LIKE ? AND issued >= ?"
-                     " ORDER BY issued DESC",
-            'report': "SELECT supplier, category, reference, flow, settled,"
-                      " strftime('%d-%m-%Y', issued) AS issued, bill"
-                      " FROM flows"
-                      " WHERE flow LIKE ? AND settled LIKE ? AND enable LIKE ?"
-                      " AND supplier_id LIKE ? AND category_id LIKE ? AND issued >= ?"
-                      " ORDER BY issued DESC",
-            'suppliers': "SELECT * FROM suppliers ORDER BY supplier",
-            'categories': "SELECT * FROM categories ORDER BY category",
-            'cbo_suppliers': "SELECT * FROM suppliers WHERE enable = 1 ORDER BY supplier",
-            'cbo_categories': "SELECT * FROM categories WHERE enable = 1 ORDER BY category",
-            'category': "SELECT category FROM categories WHERE category_id = ?",
-            'supplier': "SELECT supplier FROM suppliers WHERE supplier_id = ?",
-            'delete_transaction': "DELETE FROM events WHERE event_id = ?",
-        }
+        # domain SQL loaded from an external file (not hard-coded in source)
+        self.dict_queries: Dict[str, str] = self._load_queries()
 
         # window registry (open frames)
         self.dict_instances: Dict[str, Any] = {}
@@ -114,6 +95,15 @@ class Engine(DBMS, metaclass=_EngineMeta):
     def get_file(self, filename: str) -> str:
         """Return the full path of a file living next to this module."""
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+
+    def _load_queries(self) -> Dict[str, str]:
+        """Load the SQL statements from queries.json (no SQL hard-coded here)."""
+        try:
+            with open(self.get_file("queries.json"), encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            self.on_log("_load_queries", e, type(e), sys.modules[__name__])
+            return {}
 
     def get_log_file(self) -> str:
         """Return the log file path."""
