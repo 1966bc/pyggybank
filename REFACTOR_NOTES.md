@@ -1,7 +1,16 @@
 # PyggyBank — note architetturali per il refactor in blocco
 
 > Raccolta delle osservazioni di Giuseppe (1966bc) mentre rilegge il codice 3.0.
-> Niente viene toccato finché le note non sono complete: poi refactor unico e coerente.
+
+## Stato
+- ✅ N6 — main ↔ dati: MVP (models/Controller/MainPresenter + MainView), lista virtuale, DI
+- ✅ N7 — God Object: export XLS estratto in `exporters.XlsExporter`
+- ✅ N2/N3 — dialoghi via Controller (dati per nome, dict); rinominati
+  `update_filter`→`lookup_editor`, `filters`→`lookup_manager`
+- ⏳ N1 — SQL cablato: `dict_queries` → `queries.json`
+- ⏳ N4/N5 — filtri sovraccarichi (combo polimorfica, stack filtri)
+- ⏳ N7-bis — `GeneratePDF` pesca ancora da `app.engine` (nomi/logo)
+- ⏳ docs/test: README 3.0, espandere pytest
 
 ## Note raccolte
 
