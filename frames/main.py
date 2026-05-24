@@ -55,6 +55,33 @@ class Launcher(threading.Thread):
         self.app.engine.open_file(self.path)
 
 
+class EventsList(wx.ListCtrl):
+    """
+    Virtual report list for the events grid.
+
+    In LC_VIRTUAL mode wxPython calls OnGetItemText on the *list control*
+    itself, so it must live here (not on the frame). Cell text is pulled from
+    the presenter on demand; the control stores no row data.
+    """
+
+    def __init__(self, parent, presenter, **kwargs) -> None:
+        super().__init__(parent, style=wx.LC_REPORT | wx.LC_VIRTUAL |
+                         wx.LC_HRULES | wx.LC_VRULES, **kwargs)
+        self.presenter = presenter
+
+    def OnGetItemText(self, item: int, column: int) -> str:
+        return self.presenter.cell(item, column)
+
+    # an image list is assigned (sort arrows on the column headers); a virtual
+    # list then requires these, or it asserts/segfaults while painting rows.
+    # -1 means "no per-row icon".
+    def OnGetItemImage(self, item: int) -> int:
+        return -1
+
+    def OnGetItemColumnImage(self, item: int, column: int) -> int:
+        return -1
+
+
 class MainFrame(wx.Frame):
     """PyggyBank main window — passive view over a MainPresenter."""
 
@@ -100,10 +127,7 @@ class MainFrame(wx.Frame):
         self.stEvents = wx.StaticText(p, -1, 'Records')
         self.stEvents.SetFont(wx.Font(12, wx.FONTFAMILY_SWISS,
                                       wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
-        self.lstEvents = wx.ListCtrl(
-            p, -1,
-            style=wx.LC_REPORT | wx.LC_VIRTUAL | wx.LC_HRULES | wx.LC_VRULES,
-            size=(fw * 70, fw * 30))
+        self.lstEvents = EventsList(p, self.presenter, size=(fw * 70, fw * 30))
         self.lstEvents.SetToolTip('Double click to edit!')
         self.lstEvents.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.on_edit)
         self.lstEvents.Bind(wx.EVT_LIST_COL_CLICK, self.on_sort)
@@ -200,10 +224,6 @@ class MainFrame(wx.Frame):
         self.stEvents.SetLabel("Events %s" % count)
         self.StatusBar.SetStatusText('Wallet: %s' % totals['wallet'], 1)
         self.StatusBar.SetStatusText('In: %s Out: %s' % (totals['in'], totals['out']), 0)
-
-    # virtual list: pull cell text from the presenter on demand
-    def OnGetItemText(self, item: int, column: int) -> str:
-        return self.presenter.cell(item, column)
 
     # ------------------------------------------------------------------ #
     # lifecycle
@@ -395,4 +415,6 @@ class MainFrame(wx.Frame):
         ret = wx.MessageBox("Quit me?", wx.GetApp().GetAppName(),
                             wx.YES_NO | wx.ICON_QUESTION | wx.CENTRE | wx.NO_DEFAULT)
         if ret == wx.YES:
-            wx.GetApp().OnExit()
+            # destroying the top window ends the main loop; wx then calls
+            # App.OnExit(), which closes the database connection.
+            self.Destroy()

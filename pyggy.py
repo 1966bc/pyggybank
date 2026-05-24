@@ -75,14 +75,12 @@ class PyggyBank(wx.App):
             return False
 
     def OnExit(self):
+        # called by wx after the main loop ends; just release resources.
         try:
             self.engine.close()
         except Exception:
             pass
-        for window in wx.GetTopLevelWindows():
-            if window is not self:
-                window.Destroy()
-        return True
+        return 0
 
 
 def main():
