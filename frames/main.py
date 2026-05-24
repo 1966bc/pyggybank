@@ -32,7 +32,7 @@ import wx.lib.dialogs
 from wx.lib.wordwrap import wordwrap
 
 from frames import update_data
-from frames import filters
+from frames import lookup_manager
 import reports.rpt_flows
 
 
@@ -224,7 +224,7 @@ class MainFrame(wx.Frame):
         self.OnOpen()
 
     def on_add(self, evt) -> None:
-        obj = update_data.Dialog(parent=self)
+        obj = update_data.Dialog(self, self.presenter.controller)
         obj.OnOpen()
         obj.Center()
         obj.ShowModal()
@@ -234,7 +234,7 @@ class MainFrame(wx.Frame):
         if row == -1:
             wx.GetApp().engine.answer_info(wx.GetApp().engine.no_select)
             return
-        obj = update_data.Dialog(parent=self)
+        obj = update_data.Dialog(self, self.presenter.controller)
         obj.OnOpen(self.presenter.get_event(row))
         obj.Center()
         obj.ShowModal()
@@ -324,27 +324,24 @@ class MainFrame(wx.Frame):
             return
         rows = self.presenter.categories() if mode == 1 else self.presenter.suppliers()
         for r in rows:
-            values = list(r.values())
-            self.cbFilter.Append(str(values[1]).strip(), (int(values[0]), str(values[1]).strip()))
+            name = str(r['name']).strip()
+            self.cbFilter.Append(name, (int(r['pk']), name))
 
     # ------------------------------------------------------------------ #
     # lookup managers (categories / suppliers)
     # ------------------------------------------------------------------ #
     def menuCategories(self, evt) -> None:
-        if wx.GetApp().engine.match_instance('filters') is True:
-            return
-        obj = filters.Frame(parent=self)
-        wx.GetApp().engine.get_instance(obj)
-        obj.OnOpen('categories', 'category_id')
-        obj.Show()
-        obj.Center()
+        self._open_lookup_manager('categories')
 
     def menuSuppliers(self, evt) -> None:
-        if wx.GetApp().engine.match_instance('filters') is True:
+        self._open_lookup_manager('suppliers')
+
+    def _open_lookup_manager(self, table: str) -> None:
+        if wx.GetApp().engine.match_instance('lookup_manager') is True:
             return
-        obj = filters.Frame(parent=self)
+        obj = lookup_manager.LookupManager(self, self.presenter.controller, table)
         wx.GetApp().engine.get_instance(obj)
-        obj.OnOpen('suppliers', 'supplier_id')
+        obj.OnOpen()
         obj.Show()
         obj.Center()
 

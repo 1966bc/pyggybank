@@ -52,9 +52,12 @@ def test_filter_in_flow_only(controller):
 
 def test_save_get_delete_round_trip(controller):
     before = len(controller.get_flows(FlowFilter()))
-    record = (1, 1, 1, 1, "PYTEST", 9.99,
-              datetime.datetime(2026, 5, 24), datetime.datetime(2026, 6, 24),
-              "desc", datetime.datetime.now(), 1)
+    # named record: order is irrelevant, SQL is built from the keys
+    record = {"reference": "PYTEST", "bill": 9.99, "flow": 1, "settled": 1,
+              "supplier_id": 1, "category_id": 1,
+              "issued": datetime.datetime(2026, 5, 24),
+              "expiration": datetime.datetime(2026, 6, 24),
+              "description": "desc", "modify": datetime.datetime.now(), "enable": 1}
 
     new_id = controller.save_event(record)
     assert isinstance(new_id, int)
@@ -63,13 +66,26 @@ def test_save_get_delete_round_trip(controller):
     assert saved["reference"] == "PYTEST"
     assert saved["bill"] == 9.99
 
-    # update
-    updated = (0, 1, 1, 0, "PYTEST2", 5.0,
-               datetime.datetime(2026, 5, 24), datetime.datetime(2026, 6, 24),
-               "desc2", datetime.datetime.now(), 1)
-    controller.save_event(updated, event_id=new_id)
+    controller.save_event({"reference": "PYTEST2", "bill": 5.0}, event_id=new_id)
     assert controller.get_event(new_id)["reference"] == "PYTEST2"
+    assert controller.get_event(new_id)["bill"] == 5.0
 
     controller.delete_event(new_id)
     assert controller.get_event(new_id) is None
     assert len(controller.get_flows(FlowFilter())) == before
+
+
+def test_lookup_list_get_save(controller):
+    cats = controller.list_lookup("categories")
+    assert cats and set(cats[0]) == {"pk", "name", "enabled"}
+
+    new_id = controller.save_lookup("categories", "PyTestCat", True)
+    assert isinstance(new_id, int)
+
+    rec = controller.get_lookup("categories", new_id)
+    assert rec == {"pk": new_id, "name": "PyTestCat", "enabled": True}
+
+    controller.save_lookup("categories", "PyTestCat2", False, pk=new_id)
+    rec = controller.get_lookup("categories", new_id)
+    assert rec["name"] == "PyTestCat2"
+    assert rec["enabled"] is False

@@ -19,7 +19,7 @@ import os
 import datetime
 import traceback
 import subprocess
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import wx
 
@@ -168,35 +168,6 @@ class Engine(DBMS, metaclass=_EngineMeta):
                 else:
                     raise
         return wx.DateTime.FromDMY(my_date.day, my_date.month - 1, my_date.year)
-
-    # ------------------------------------------------------------------ #
-    # wx combo helpers
-    # ------------------------------------------------------------------ #
-    def get_combo_id(self, caller: Any, widget_id: int) -> int:
-        """Return the primary key stored as client data of the combo selection."""
-        widget = caller.FindWindowById(widget_id)
-        return int(widget.GetClientData(widget.GetSelection())[0])
-
-    def set_combo(self, d: Dict[int, Tuple], caller: Any) -> None:
-        """
-        Populate one or more combos.
-
-        Args:
-            d: {widget_id: (store_dict, sql, args, with_nothing)}
-               store_dict maps primary key -> combo index.
-            caller: the frame owning the combos.
-        """
-        for widget_id, (store, sql, args, with_nothing) in d.items():
-            combo = caller.FindWindowById(widget_id)
-            if with_nothing is not None:
-                combo.Append('Nothing', (0, 'Nothing'))
-            for row in self.read(True, sql, args) or []:
-                values = list(row.values())
-                pk = int(values[0])
-                showed = str(values[1]).strip()
-                combo.Append(showed, (pk, showed))
-            for index in range(combo.GetCount()):
-                store[int(combo.GetClientData(index)[0])] = index
 
     # ------------------------------------------------------------------ #
     # window registry

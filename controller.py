@@ -60,22 +60,64 @@ class Controller:
     def get_event(self, event_id: int) -> Optional[Dict[str, Any]]:
         return self.db.get_selected('events', 'event_id', event_id)
 
-    def save_event(self, record: tuple, event_id: Optional[int] = None) -> Optional[int]:
-        """Insert a new event, or update the one identified by event_id."""
+    def save_event(self, record: Dict[str, Any],
+                   event_id: Optional[int] = None) -> Optional[int]:
+        """
+        Insert a new event, or update the one identified by event_id.
+
+        `record` is a {column: value} dict, so callers never depend on the
+        physical column order: the SQL is built from the dict's own keys.
+        """
+        columns = list(record.keys())
+        values = tuple(record[c] for c in columns)
         if event_id is None:
-            sql = self.db.build_sql('events', 'insert')
-            return self.db.write(sql, record)
-        sql = self.db.build_sql('events', 'update')
-        return self.db.write(sql, record + (event_id,))
+            sql = self.db.build_sql('events', 'insert', columns)
+            return self.db.write(sql, values)
+        sql = self.db.build_sql('events', 'update', columns)
+        return self.db.write(sql, values + (event_id,))
 
     def delete_event(self, event_id: int) -> Optional[int]:
         return self.db.write(self.db.dict_queries['delete_transaction'], (event_id,))
 
     # ------------------------------------------------------------------ #
     # lookup tables (categories / suppliers)
+    #
+    # These are the small master tables behind the combos and the lookup
+    # manager. The controller normalises their differing column names
+    # (category/category_id vs supplier/supplier_id) into a stable shape:
+    #     {'pk': int, 'name': str, 'enabled': bool}
+    # so the generic GUI never has to know the physical column names.
     # ------------------------------------------------------------------ #
-    def list_enabled_categories(self) -> List[Dict[str, Any]]:
-        return self.db.read(True, self.db.dict_queries['cbo_categories']) or []
+    LOOKUPS = {
+        'categories': {'pk': 'category_id', 'name': 'category'},
+        'suppliers': {'pk': 'supplier_id', 'name': 'supplier'},
+    }
 
-    def list_enabled_suppliers(self) -> List[Dict[str, Any]]:
-        return self.db.read(True, self.db.dict_queries['cbo_suppliers']) or []
+    def _normalise_lookup(self, table: str, row: Dict[str, Any]) -> Dict[str, Any]:
+        cols = self.LOOKUPS[table]
+        return {'pk': row[cols['pk']], 'name': row[cols['name']],
+                'enabled': bool(row['enable'])}
+
+    def list_lookup(self, table: str) -> List[Dict[str, Any]]:
+        """All rows of a lookup table as {'pk', 'name', 'enabled'} dicts."""
+        rows = self.db.read(True, self.db.dict_queries[table]) or []
+        return [self._normalise_lookup(table, r) for r in rows]
+
+    def list_enabled(self, table: str) -> List[Dict[str, Any]]:
+        """Enabled rows only (used to populate the event dialog combos)."""
+        return [r for r in self.list_lookup(table) if r['enabled']]
+
+    def get_lookup(self, table: str, pk: int) -> Optional[Dict[str, Any]]:
+        row = self.db.get_selected(table, self.LOOKUPS[table]['pk'], pk)
+        return self._normalise_lookup(table, row) if row else None
+
+    def save_lookup(self, table: str, name: str, enabled: bool,
+                    pk: Optional[int] = None) -> Optional[int]:
+        """Insert or update a lookup row by name + enabled flag."""
+        cols = self.LOOKUPS[table]
+        record = {cols['name']: name, 'enable': 1 if enabled else 0}
+        columns = list(record.keys())
+        values = tuple(record.values())
+        if pk is None:
+            return self.db.write(self.db.build_sql(table, 'insert', columns), values)
+        return self.db.write(self.db.build_sql(table, 'update', columns), values + (pk,))

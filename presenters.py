@@ -101,10 +101,10 @@ class MainPresenter:
         return self.controller.get_event(self.event_id_at(row))
 
     def categories(self) -> List[Dict[str, Any]]:
-        return self.controller.list_enabled_categories()
+        return self.controller.list_enabled('categories')
 
     def suppliers(self) -> List[Dict[str, Any]]:
-        return self.controller.list_enabled_suppliers()
+        return self.controller.list_enabled('suppliers')
 
     def report_rows(self) -> List[Dict[str, Any]]:
         return self.controller.get_report_rows(self.filter)

@@ -26,7 +26,7 @@ import re
 import sys
 import inspect
 import sqlite3
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 
 class DBMS:
@@ -217,19 +217,24 @@ class DBMS:
             if cursor:
                 cursor.close()
 
-    def build_sql(self, table: str, op: str) -> Optional[str]:
+    def build_sql(self, table: str, op: str,
+                  columns: Optional[Sequence[str]] = None) -> Optional[str]:
         """
-        Build an INSERT or UPDATE statement from the table metadata.
+        Build an INSERT or UPDATE statement.
 
         Conventions:
-            - the PK is the first column (skipped on INSERT, used in WHERE on UPDATE)
+            - the PK is the first column (used in the WHERE clause on UPDATE)
             - placeholders use '?' (SQLite style)
+            - if `columns` is given, exactly those columns are written (each is
+              validated); otherwise all non-PK columns are used. Passing the
+              caller's named columns lets it build the statement from a dict,
+              decoupled from the physical column order.
 
         Example:
             >>> db.build_sql("events", "insert")
             'INSERT INTO events(flow,supplier_id,...) VALUES(?,?,...)'
-            >>> db.build_sql("events", "update")
-            'UPDATE events SET flow = ?, ... WHERE event_id = ?'
+            >>> db.build_sql("events", "update", ["reference", "bill"])
+            'UPDATE events SET reference = ?, bill = ? WHERE event_id = ?'
         """
         try:
             self._validate_sql_identifier(table, "table")
@@ -237,14 +242,19 @@ class DBMS:
             if not all_cols:
                 raise ValueError("No columns found for table '{0}'".format(table))
 
+            pk = all_cols[0]
+            if columns is None:
+                columns = [c for c in all_cols if c != pk]
+            else:
+                for c in columns:
+                    self._validate_sql_identifier(c, "column")
+
             if op == "insert":
-                fields = all_cols[1:]  # skip PK
-                cols = ",".join(fields)
-                placeholders = ",".join("?" * len(fields))
+                cols = ",".join(columns)
+                placeholders = ",".join("?" * len(columns))
                 return "INSERT INTO {0}({1}) VALUES({2})".format(table, cols, placeholders)
             elif op == "update":
-                pk = all_cols[0]
-                set_clause = ", ".join("{0} = ?".format(c) for c in all_cols if c != pk)
+                set_clause = ", ".join("{0} = ?".format(c) for c in columns)
                 return "UPDATE {0} SET {1} WHERE {2} = ?".format(table, set_clause, pk)
             else:
                 raise ValueError("op must be 'insert' or 'update'")
