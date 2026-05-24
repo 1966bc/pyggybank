@@ -15,6 +15,7 @@ import datetime
 from typing import Any, Dict, List, Optional, Protocol, Tuple, runtime_checkable
 
 from models import FlowFilter
+from exporters import XlsExporter
 
 
 @runtime_checkable
@@ -111,6 +112,10 @@ class MainPresenter:
     def report_args(self) -> tuple:
         """Legacy 6-tuple consumed by reports.rpt_flows.GeneratePDF."""
         return self.controller.flow_args(self.filter)
+
+    def export_xlsx(self, path: str) -> str:
+        """Write the current rows to an xlsx file via the XlsExporter."""
+        return XlsExporter().export(self.rows, path)
 
     # ------------------------------------------------------------------ #
     # actions

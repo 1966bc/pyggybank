@@ -22,7 +22,6 @@ import subprocess
 from typing import Any, Dict, Optional, Tuple
 
 import wx
-from openpyxl.styles import Font, PatternFill
 
 from dbms import DBMS
 
@@ -198,24 +197,6 @@ class Engine(DBMS, metaclass=_EngineMeta):
                 combo.Append(showed, (pk, showed))
             for index in range(combo.GetCount()):
                 store[int(combo.GetClientData(index)[0])] = index
-
-    # ------------------------------------------------------------------ #
-    # xls (openpyxl) styling
-    # ------------------------------------------------------------------ #
-    def xls_bg_colour(self, colour: str) -> PatternFill:
-        """Return a solid openpyxl PatternFill for the given colour name."""
-        dict_colour = {"green": "92D050", "red": "FF0000", "white": "FFFFFF",
-                       "yellow": "FFFF00", "gray": "BFBFBF", "blue": "0070C0",
-                       "magenta": "FF00FF", "cyan": "00FFFF"}
-        hex_colour = dict_colour[colour]
-        return PatternFill(start_color=hex_colour, end_color=hex_colour,
-                           fill_type="solid")
-
-    def xls_style_font(self, is_bold: bool, is_underline: bool,
-                       font_name: str) -> Font:
-        """Return an openpyxl Font."""
-        return Font(name=font_name, bold=bool(is_bold),
-                    underline='single' if is_underline else 'none')
 
     # ------------------------------------------------------------------ #
     # window registry

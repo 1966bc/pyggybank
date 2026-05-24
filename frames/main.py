@@ -30,7 +30,6 @@ import wx
 import wx.adv
 import wx.lib.dialogs
 from wx.lib.wordwrap import wordwrap
-import openpyxl
 
 from frames import update_data
 from frames import filters
@@ -260,40 +259,7 @@ class MainFrame(wx.Frame):
         b = wx.GetApp().engine.busy(self)
         fd, path = tempfile.mkstemp(".xlsx")
         os.close(fd)
-
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = wx.GetApp().GetAppName()
-
-        bold = wx.GetApp().engine.xls_style_font(True, False, 'Times New Roman')
-        green = wx.GetApp().engine.xls_bg_colour("green")
-        yellow = wx.GetApp().engine.xls_bg_colour("yellow")
-
-        headers = ['FLOW', 'SETTLED', 'SUPPLIER', 'CATEGORY',
-                   'REFERENCE', 'ISSUED', 'IN', 'OUT']
-        for col, header in enumerate(headers, start=1):
-            ws.cell(row=1, column=col, value=header)
-
-        row = 2
-        for i in self.presenter.rows:
-            ws.cell(row=row, column=1, value=int(i["flow"]))
-            ws.cell(row=row, column=2, value=int(i["settled"]))
-            ws.cell(row=row, column=3, value=str(i["supplier"])).font = bold
-            ws.cell(row=row, column=4, value=str(i["category"])).font = bold
-            ws.cell(row=row, column=5, value=str(i["reference"]))
-            ws.cell(row=row, column=6, value=str(i["issued"]))
-            if int(i["flow"]) != 0:
-                ws.cell(row=row, column=7, value=float(i["bill"])).fill = green
-            else:
-                ws.cell(row=row, column=8, value=float(i["bill"])).fill = yellow
-            row += 1
-
-        ws.cell(row=row, column=7, value="=SUM(G2:G%d)" % (row - 1)).font = bold
-        ws.cell(row=row, column=8, value="=SUM(H2:H%d)" % (row - 1)).font = bold
-        c = ws.cell(row=row, column=9, value="=(G%d-H%d)" % (row, row))
-        c.font = wx.GetApp().engine.xls_style_font(True, True, 'Times New Roman')
-
-        wb.save(path)
+        self.presenter.export_xlsx(path)
         Launcher(path, wx.GetApp()).start()
         b = None
 
