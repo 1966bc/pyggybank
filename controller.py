@@ -51,6 +51,14 @@ class Controller:
         """Return the rows for the PDF report matching the filter."""
         return self.db.read(True, self.db.dict_queries['report'], self.flow_args(f)) or []
 
+    def category_name(self, category_id: int) -> Optional[str]:
+        row = self.db.read(False, self.db.dict_queries['category'], (category_id,))
+        return row['category'] if row else None
+
+    def supplier_name(self, supplier_id: int) -> Optional[str]:
+        row = self.db.read(False, self.db.dict_queries['supplier'], (supplier_id,))
+        return row['supplier'] if row else None
+
     def oldest_issued(self) -> Optional[Any]:
         """Return the oldest 'issued' date in the events table, or None."""
         row = self.db.read(

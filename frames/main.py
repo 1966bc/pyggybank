@@ -251,9 +251,17 @@ class MainFrame(wx.Frame):
             wx.GetApp().engine.answer_info(wx.GetApp().engine.abort_by_user)
 
     def on_preview(self, evt) -> None:
-        paper = reports.rpt_flows.GeneratePDF(
-            self.presenter.report_rows(), self.presenter.report_args(), wx.GetApp())
-        paper.create_doc()
+        rows = self.presenter.report_rows()
+        info = self.presenter.report_header()
+        header = reports.rpt_flows.ReportHeader(
+            title=wx.GetApp().GetAppName(),
+            logo=wx.GetApp().engine.logo,
+            start_date=info['start_date'],
+            category=info['category'],
+            supplier=info['supplier'],
+            records=len(rows))
+        path = reports.rpt_flows.GeneratePDF(rows, header).create_doc()
+        Launcher(path, wx.GetApp()).start()
 
     def on_export(self, evt) -> None:
         b = wx.GetApp().engine.busy(self)

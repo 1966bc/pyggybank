@@ -75,6 +75,13 @@ def test_save_get_delete_round_trip(controller):
     assert len(controller.get_flows(FlowFilter())) == before
 
 
+def test_name_resolution(controller):
+    cat = controller.list_lookup("categories")[0]
+    assert controller.category_name(cat["pk"]) == cat["name"]
+    sup = controller.list_lookup("suppliers")[0]
+    assert controller.supplier_name(sup["pk"]) == sup["name"]
+
+
 def test_lookup_list_get_save(controller):
     cats = controller.list_lookup("categories")
     assert cats and set(cats[0]) == {"pk", "name", "enabled"}

@@ -5,14 +5,23 @@
 # mailto:   [giuseppe.costanzi@gmail.com]
 # modify:   2026 - ported to Python 3 / reportlab 4
 # version:  3.0
-# description: report data
+# description: PDF report of the flows
 #-----------------------------------------------------------------------------
+
+"""
+PDF report builder.
+
+Decoupled from the application: it receives the rows to print and a ReportHeader
+value object (title, logo path, filter summary). It has no wxPython, no database
+and no app reference; it builds the file and returns its path. Opening the file
+is the caller's responsibility.
+"""
 
 import os
 import datetime
 import tempfile
-import threading
-from typing import Dict, List, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List
 
 from reportlab.platypus import Spacer, SimpleDocTemplate, Table, TableStyle
 from reportlab.platypus.flowables import Image, PageBreak
@@ -21,83 +30,47 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 
 
-class Launcher(threading.Thread):
-    def __init__(self, path: str, app: "wx.App") -> None:
-        threading.Thread.__init__(self)
-        self.app = app
-        self.path = path
-
-    def run(self) -> None:
-        self.app.engine.open_file(self.path)
+@dataclass
+class ReportHeader:
+    """Everything the report needs about its context (no app/engine)."""
+    title: str
+    logo: str
+    start_date: datetime.datetime
+    category: str
+    supplier: str
+    records: int
 
 
 class GeneratePDF:
-    def __init__(self, rs: List[Dict], args: Tuple, app: "wx.App") -> None:
-
-        self.app = app
-        self.rs = rs
-        self.args = args
+    def __init__(self, rows: List[Dict[str, Any]], header: ReportHeader) -> None:
+        self.rows = rows
+        self.header = header
         self.today = datetime.date.today()
-        self.start_date = args[5]
+        self.story: list = []
 
-        if self.args[4] != '%':
-            row = self.app.engine.read(False,
-                                       self.app.engine.dict_queries['category'],
-                                       (self.args[4],))
-            self.category = str(row["category"])
-        else:
-            self.category = 'No select'
-
-        if self.args[3] != '%':
-            row = self.app.engine.read(False,
-                                       self.app.engine.dict_queries['supplier'],
-                                       (self.args[3],))
-            self.supplier = str(row["supplier"])
-        else:
-            self.supplier = 'No select'
-
-        self.story = []
-
-    def first_page(self, canvas, doc) -> None:
-
+    def _footer(self, canvas, doc) -> None:
         canvas.saveState()
         canvas.setFont('Courier', 9)
         canvas.drawString(inch, 0.75 * inch, "%s - %s" % (self.today.strftime('%d/%m/%Y'),
                                                           canvas.getPageNumber()))
         canvas.drawString(490, 0.75 * inch, "his Majesty")
         canvas.setFont('Times-Bold', 8)
-        canvas.drawCentredString(0.5 * A4[0], 0.5 * inch, "%s" % self.app.GetAppName())
-        canvas.restoreState()
-
-    def later_pages(self, canvas, doc) -> None:
-
-        canvas.saveState()
-        canvas.setFont('Courier', 9)
-        canvas.drawString(inch, 0.75 * inch, "%s - %s" % (self.today.strftime('%d/%m/%Y'),
-                                                          canvas.getPageNumber()))
-        canvas.drawString(490, 0.75 * inch, "his Majesty")
-
-        canvas.setFont('Times-Bold', 8)
-        canvas.drawCentredString(0.5 * A4[0], 0.5 * inch, "%s" % self.app.GetAppName())
+        canvas.drawCentredString(0.5 * A4[0], 0.5 * inch, "%s" % self.header.title)
         canvas.restoreState()
 
     def reportHeader(self) -> Table:
+        logo = Image(self.header.logo)
+        logo.drawHeight = 0.80 * inch
+        logo.drawWidth = 1.20 * inch
 
-        reportLogo = Image(self.app.engine.logo)
-        reportLogo.drawHeight = 0.80 * inch
-        reportLogo.drawWidth = 1.20 * inch
-
-        t = Table((('Data Report', '', [reportLogo]),
-                   ("Start Date", self.start_date.strftime('%d/%m/%Y'), ''),
-                   ("Category", self.category, ''),
-                   ("Supplier", self.supplier, ''),
-                   ("Records", len(self.rs), '')),
-                  # colWidths, rowHeights,
+        t = Table((('Data Report', '', [logo]),
+                   ("Start Date", self.header.start_date.strftime('%d/%m/%Y'), ''),
+                   ("Category", self.header.category, ''),
+                   ("Supplier", self.header.supplier, ''),
+                   ("Records", self.header.records, '')),
                   (80, 80, 250),
                   (18, 18, 18, 18, 18,))
-        # ('SPAN',(2,0),(2,-1)) expand image
-        t.setStyle(TableStyle([  # column, row
-                               ('SPAN', (2, 0), (2, -1)),
+        t.setStyle(TableStyle([('SPAN', (2, 0), (2, -1)),
                                ('BOX', (0, 1), (1, -1), 0.5, colors.lightgrey),
                                ('LINEABOVE', (0, -1), (1, -1), 0.5, colors.lightgrey),
                                ('TEXTCOLOR', (1, 1), (1, -3), colors.red),
@@ -107,27 +80,21 @@ class GeneratePDF:
         return t
 
     def reportTable(self) -> Table:
-
         account = 0
-        for i in self.rs:
-            if i["flow"] == 1:
-                account += float(i["bill"])
+        for r in self.rows:
+            if r["flow"] == 1:
+                account += float(r["bill"])
             else:
-                account -= float(i["bill"])
+                account -= float(r["bill"])
 
         # reportlab needs sequences, so flatten the dict rows in column order
         data = [[r["supplier"], r["category"], r["reference"], r["flow"],
-                 r["settled"], r["issued"], r["bill"]] for r in self.rs]
-
-        fields = ['Supplier', 'Category', 'Reference', 'T', 'S', 'Issued', 'Bill']
-        data.insert(0, fields)
+                 r["settled"], r["issued"], r["bill"]] for r in self.rows]
+        data.insert(0, ['Supplier', 'Category', 'Reference', 'T', 'S', 'Issued', 'Bill'])
         data.insert(len(data), ['', '', '', 'account', '', round(account, 2), ''])
-        self.rs = data
-        t = Table(data,
-                  colWidths=(120, 70, 80, 30, 50, 80, 50),
-                  hAlign='CENTER', splitByRow=1,
-                  repeatRows=2)
 
+        t = Table(data, colWidths=(120, 70, 80, 30, 50, 80, 50),
+                  hAlign='CENTER', splitByRow=1, repeatRows=2)
         t.setStyle(TableStyle([('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                                ('ALIGN', (0, 1), (1, -1), 'LEFT'),
                                ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
@@ -142,37 +109,25 @@ class GeneratePDF:
                                ('FONT', (-4, -1), (-3, -1), 'Times-BoldItalic', 12),
                                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
 
-        args = []
-        for i, row in enumerate(self.rs):
+        bg = []
+        for i, row in enumerate(data):
             if row[3] == 0:
-                args.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor('#FFE1E0')))
+                bg.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor('#FFE1E0')))
             elif row[3] == 1:
-                args.append(("BACKGROUND", (0, i), (-1, i), colors.lightgreen))
-            else:
-                pass
-
-        t.setStyle(TableStyle(args))
-
+                bg.append(("BACKGROUND", (0, i), (-1, i), colors.lightgreen))
+        t.setStyle(TableStyle(bg))
         return t
 
-    def create_doc(self) -> None:
-
+    def create_doc(self) -> str:
+        """Build the PDF to a temp file and return its path."""
         self.story.append(self.reportHeader())
         self.story.append(Spacer(1, 0.2 * inch))
         self.story.append(self.reportTable())
         self.story.append(PageBreak())
-        self.build_document()
-
-    def build_document(self) -> None:
 
         fd, path = tempfile.mkstemp(".pdf")
         os.close(fd)
-
-        doc = SimpleDocTemplate(path,
-                                pagesize=(9.0 * inch, 11 * inch),
-                                showBoundary=0,
-                                title=self.app.GetAppName())
-        doc.build(self.story,
-                  onFirstPage=self.first_page,
-                  onLaterPages=self.later_pages)
-        Launcher(path, self.app).start()
+        doc = SimpleDocTemplate(path, pagesize=(9.0 * inch, 11 * inch),
+                                showBoundary=0, title=self.header.title)
+        doc.build(self.story, onFirstPage=self._footer, onLaterPages=self._footer)
+        return path

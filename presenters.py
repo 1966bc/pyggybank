@@ -109,9 +109,15 @@ class MainPresenter:
     def report_rows(self) -> List[Dict[str, Any]]:
         return self.controller.get_report_rows(self.filter)
 
-    def report_args(self) -> tuple:
-        """Legacy 6-tuple consumed by reports.rpt_flows.GeneratePDF."""
-        return self.controller.flow_args(self.filter)
+    def report_header(self) -> Dict[str, Any]:
+        """Resolved header fields for the PDF report (names, not ids)."""
+        category = ('No select' if self.filter.category_id == '%'
+                    else self.controller.category_name(self.filter.category_id))
+        supplier = ('No select' if self.filter.supplier_id == '%'
+                    else self.controller.supplier_name(self.filter.supplier_id))
+        return {'start_date': self.filter.start_date,
+                'category': category,
+                'supplier': supplier}
 
     def export_xlsx(self, path: str) -> str:
         """Write the current rows to an xlsx file via the XlsExporter."""
