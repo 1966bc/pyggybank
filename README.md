@@ -1,95 +1,98 @@
-# pyggybank
-Python, wxPython, Sqlite, Reportlab, openpyxl in action all in one
+# PyggyBank 3.0
 
-## Version 3.0 — Python 3 / wxPython 4 (Phoenix)
+A small desktop "piggy bank" / personal cash-flow manager: record money **in**
+and **out**, tag each entry with a supplier and a category, filter the ledger,
+and print it to PDF or export it to Excel.
 
-This version has been ported from the original Python 2 + wxPython 2.8 (Classic)
-codebase to run on modern systems.
+Built with **Python 3 + wxPython 4 (Phoenix)**, **SQLite**, **ReportLab** and
+**openpyxl**.
 
-Requirements:
+> Version 3.0 is a full port of the original 2017 codebase (Python 2 + wxPython
+> 2.8 Classic) **and** an architectural refactor to a clean MVP design. See the
+> changelog at the bottom.
+
+## Architecture (Model–View–Presenter)
+
+The GUI never touches SQL or the database: everything goes through a domain
+layer. Data access is fully decoupled from presentation.
+
+```
+ View (wxPython, passive)        Presenter (pure Python)      Domain / data
+ ─────────────────────────       ───────────────────────      ─────────────────────
+ MainFrame  ── intent ──►  MainPresenter ──►  Controller ──►  DBMS ──►  SQLite
+   (implements MainView)     (filters, totals,   (get_flows,    (connection,
+   virtual ListCtrl          sorting; no wx)     save_event,    read/write,
+ dialogs / lookup editor                         lookups…)      build_sql)
+ XlsExporter, GeneratePDF  ◄──── data by name (dicts) ─────►     SQL from queries.json
+```
+
+| Module | Responsibility |
+|--------|----------------|
+| `pyggy.py` | launcher + dependency injection (`Engine → Controller → MainPresenter → MainFrame`) |
+| `dbms.py` | `DBMS`: SQLite connection, `read`/`write`, `build_sql`, SQL-identifier validation, **dict rows** |
+| `engine.py` | `Engine(DBMS)` singleton; loads `queries.json`; UI services (icon, font, calendar, dialogs) + `log.txt` logging |
+| `controller.py` | domain layer: `get_flows`, `save_event`, lookup CRUD, name resolution |
+| `models.py` | `FlowFilter` value object |
+| `presenters.py` | `MainPresenter` (pure, testable) + `MainView` protocol |
+| `exporters.py` | `XlsExporter` (openpyxl, pure) |
+| `reports/rpt_flows.py` | `GeneratePDF` + `ReportHeader` (ReportLab, no app reference) |
+| `frames/main.py` | `MainFrame` — passive view, virtual `ListCtrl` |
+| `frames/update_data.py` | add / edit an event |
+| `frames/lookup_manager.py` | list & manage categories / suppliers |
+| `frames/lookup_editor.py` | add / edit one category or supplier |
+| `queries.json` | the SQL statements (data, not code) |
+| `pyggy.db` | sample SQLite database |
+
+## Requirements
 
 * Python 3.8+
 * wxPython >= 4.2 (Phoenix)
-* reportlab >= 4.0   (PDF reports)
-* openpyxl >= 3.0    (xls/xlsx export — replaces the old xlwt)
+* reportlab >= 4.0
+* openpyxl >= 3.0
 * SQLite (bundled with Python)
 
-Install the dependencies and run:
+## Run
 
 ```sh
-python3 -m venv --system-site-packages .venv   # if wxPython is installed system-wide
+# if wxPython is installed system-wide, let the venv see it:
+python3 -m venv --system-site-packages .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python pyggy.py
 ```
 
-(If wxPython is not installed system-wide, add `wxPython` to the pip install and
-drop `--system-site-packages`.)
+(If wxPython is *not* installed system-wide, add `wxPython` to the pip install
+and drop `--system-site-packages`.)
 
-### Original run instructions (Python 2 — historical)
+The window follows your desktop's GTK theme (light or dark) — that is intended.
 
-```
-python <= 2.6
-wxPython version 2.8.10.1
-SQLite version 3.7.3
-Reportlab version 2.4-4
+## Development & tests
 
-bc@hal9000:~/pyggy$ python pyggy.py
+```sh
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest
 ```
 
-Change log[2.3]
-Hello everyone,
-in this new version of Pyggy Bank I changed my developer strategy.
-Now all architecture is center on wx.GetApp().
-This allows us to avoid strange alchemies to pass variables and constants 
-from a frame to the other in the whole project.
-I have even tried to follow Editra Coding Guidelines to comment my code
-Heavy refatoring of all scripts.
+The presenter, exporter and report tests run with **no wxPython and no
+database** (the payoff of the MVP split); the controller/DBMS tests run against
+an in-memory or throwaway SQLite copy.
 
-Comments welcome ... better if caustic!
+## Changelog
 
+### 3.0
+* Ported Python 2 → 3 and wxPython 2.8 (Classic) → 4.2 (Phoenix).
+* `xlwt` → `openpyxl`; ReportLab 2 → 4.
+* Refactored to MVP: passive `MainFrame` over a `MainPresenter`, with a
+  `Controller`/`DBMS` data layer. The GUI no longer issues SQL.
+* Virtual `ListCtrl`; dict-based rows; SQL moved to `queries.json`.
+* Export (XLS) and the PDF report extracted into standalone, app-independent
+  services.
+* Type hints, docstrings, `on_log` → `log.txt`, and a pytest suite.
 
-How it work:
-Pyggy Bank is a piggy bank so you can put or take money....;)
-To do this you need to handle events so ,once the program is opened,
-to add an event press the 'Add' button,fill all field in the frame and
-choice which type of event want to have selecting the Flow check box
-(Select = IN, deselect = OUT).Notice that you can check if the event 
-is settled or no.
-Press Save button.
-To delete an event select it on the listbox and press Delete button.
-To 'modify' an event select it and press Edit button, make your update
-and press Save button.
-In the main frame, you see all event and you can even filter these using 
-left check_box that have 3 state.
-You can filter events using the combo under the listbox.
-Play with these to see the effects on the event's listbox.
-To print press Print button, the created report show what you are looking at the 
-main frame.
-To manage categories and suppliers from the menu bar press Utilities/Categories
-or Utilities/Suppliers.
-In the status bar:
-on left you see total in and out money refer to the applied filters 
-on right you see your 'Wallet' refer to the applied filters 
-As last thing, note that when you open the program calendars is set to the oldest dates
-in the database.
-Add in [2.2]
-To lunch plot from the menu bar press Utilities/Plot.
-To lunch xls export press the relative button.
+### 2.3 (historical, Python 2 / wxPython 2.8)
+Architecture centred on `wx.GetApp()`; ran on Debian Squeeze. Original launch:
+`python pyggy.py` with Python ≤ 2.6, wxPython 2.8.10.1, ReportLab 2.4.
 
-thechnical note:
-Pyggy Bank is a project that shows (or should show) a 'real world' application.
-In this new version the entire program revolves around a class named "Engine" 
-that you can see in engine.py module.
-All  operation are delegated to this class that inherits methods and attributes by
-DBMS class in dbms.py module to work with the database.
-It's important that you familiarize yourself with class and instance variables, 
-and how to modify these to make them visible to the various instances.
-Fynally you can run engine.py and dbms.py alone, try and see whats happen
+## Author & license
 
-Developed on Debian Squeeze 6.0.10
-
-I hope that this work may be of help to someone!
-enjoy yourself
-
-
-
+Giuseppe Costanzi (1966bc) — <giuseppe.costanzi@gmail.com>
+GNU GPL v3 / wxWindows License. See `LICENSE` and `copying`.
