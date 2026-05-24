@@ -1,0 +1,4 @@
+# PyggyBank 3.0 - Python 3 / wxPython 4 (Phoenix)
+wxPython>=4.2.0
+reportlab>=4.0
+openpyxl>=3.0
