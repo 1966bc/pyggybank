@@ -8,11 +8,13 @@
 # description: update categories and suppliers data
 #-----------------------------------------------------------------------------
 
+from typing import Dict, Optional
+
 import wx
 
 
 class Dialog(wx.Dialog):
-    def __init__(self, parent):
+    def __init__(self, parent) -> None:
         wx.Dialog.__init__(self, parent, wx.ID_ANY, name='dlg_update_filter')
 
         # set some frame properties
@@ -61,7 +63,7 @@ class Dialog(wx.Dialog):
         s0.SetSizeHints(self)
 
     # event handling
-    def OnOpen(self, table, pk, dict_record=None):
+    def OnOpen(self, table: str, pk: str, dict_record: Optional[Dict] = None) -> None:
 
         self.table = table
         self.pk = pk
@@ -85,7 +87,7 @@ class Dialog(wx.Dialog):
             self.SetTitle(message)
             self.ckEnable.SetValue(True)
 
-    def OnClick(self, event):
+    def OnClick(self, event: wx.CommandEvent) -> None:
 
         if event.GetId() == wx.ID_SAVE:
 
@@ -120,10 +122,10 @@ class Dialog(wx.Dialog):
         elif event.GetId() == wx.ID_CLOSE:
             self.Destroy()
 
-    def OnExit(self, event):
+    def OnExit(self, event) -> None:
         self.OnClick(self.FindWindowById(wx.ID_CLOSE))
 
-    def OnFieldsControl(self):
+    def OnFieldsControl(self) -> Optional[int]:
 
         d = {self.txFilter: self.stFilter.GetLabel()}
         return wx.GetApp().engine.fields_control(d)

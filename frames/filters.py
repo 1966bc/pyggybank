@@ -19,7 +19,7 @@ from frames import update_filter
 
 
 class Frame(wx.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent) -> None:
         wx.Frame.__init__(self, parent, -1, style=wx.GetApp().engine.frame_style(), name="filters")
 
         self.SetIcon(wx.Icon(wx.GetApp().engine.icon, wx.BITMAP_TYPE_ICO))
@@ -73,7 +73,7 @@ class Frame(wx.Frame):
         s0.SetSizeHints(self)
 
     # event handling
-    def OnOpen(self, table, pk):
+    def OnOpen(self, table: str, pk: str) -> None:
         """this function recive a table name and his primary key
            and populate le lstctrl
 
@@ -96,7 +96,7 @@ class Frame(wx.Frame):
             if values[2] == 0:
                 self.lstFilters.SetItemBackgroundColour(index, wx.Colour(wx.GetApp().engine.disable))
 
-    def OnClick(self, event):
+    def OnClick(self, event: wx.CommandEvent) -> None:
 
         if event.GetId() == wx.ID_ADD:
 
@@ -124,10 +124,10 @@ class Frame(wx.Frame):
             wx.GetApp().engine.del_instance(wx.GetApp().engine.dict_instances[self.GetName()])
             self.Destroy()
 
-    def OnExit(self, event):
+    def OnExit(self, event) -> None:
         self.OnClick(self.FindWindowById(wx.ID_CLOSE))
 
-    def OnItemSelected(self, event):
+    def OnItemSelected(self, event: wx.ListEvent) -> None:
 
         index = self.lstFilters.GetFirstSelected()
         if index == -1:
@@ -135,5 +135,5 @@ class Frame(wx.Frame):
         item = int(event.GetItem().GetText())
         self.dict_record = wx.GetApp().engine.get_selected(self.table, self.pk, item)
 
-    def OnItemActivated(self, event):
+    def OnItemActivated(self, event: wx.ListEvent) -> None:
         self.OnClick(self.FindWindowById(wx.ID_EDIT))

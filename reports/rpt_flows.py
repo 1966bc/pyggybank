@@ -12,6 +12,7 @@ import os
 import datetime
 import tempfile
 import threading
+from typing import Dict, List, Tuple
 
 from reportlab.platypus import Spacer, SimpleDocTemplate, Table, TableStyle
 from reportlab.platypus.flowables import Image, PageBreak
@@ -21,17 +22,17 @@ from reportlab.lib.pagesizes import A4
 
 
 class Launcher(threading.Thread):
-    def __init__(self, path, app):
+    def __init__(self, path: str, app: "wx.App") -> None:
         threading.Thread.__init__(self)
         self.app = app
         self.path = path
 
-    def run(self):
+    def run(self) -> None:
         self.app.engine.open_file(self.path)
 
 
 class GeneratePDF:
-    def __init__(self, rs, args, app):
+    def __init__(self, rs: List[Dict], args: Tuple, app: "wx.App") -> None:
 
         self.app = app
         self.rs = rs
@@ -57,7 +58,7 @@ class GeneratePDF:
 
         self.story = []
 
-    def first_page(self, canvas, doc):
+    def first_page(self, canvas, doc) -> None:
 
         canvas.saveState()
         canvas.setFont('Courier', 9)
@@ -68,7 +69,7 @@ class GeneratePDF:
         canvas.drawCentredString(0.5 * A4[0], 0.5 * inch, "%s" % self.app.GetAppName())
         canvas.restoreState()
 
-    def later_pages(self, canvas, doc):
+    def later_pages(self, canvas, doc) -> None:
 
         canvas.saveState()
         canvas.setFont('Courier', 9)
@@ -80,7 +81,7 @@ class GeneratePDF:
         canvas.drawCentredString(0.5 * A4[0], 0.5 * inch, "%s" % self.app.GetAppName())
         canvas.restoreState()
 
-    def reportHeader(self):
+    def reportHeader(self) -> Table:
 
         reportLogo = Image(self.app.engine.logo)
         reportLogo.drawHeight = 0.80 * inch
@@ -105,7 +106,7 @@ class GeneratePDF:
                                ('FONT', (0, 0), (0, 0), 'Times-Bold', 18), ]))
         return t
 
-    def reportTable(self):
+    def reportTable(self) -> Table:
 
         account = 0
         for i in self.rs:
@@ -154,7 +155,7 @@ class GeneratePDF:
 
         return t
 
-    def create_doc(self):
+    def create_doc(self) -> None:
 
         self.story.append(self.reportHeader())
         self.story.append(Spacer(1, 0.2 * inch))
@@ -162,7 +163,7 @@ class GeneratePDF:
         self.story.append(PageBreak())
         self.build_document()
 
-    def build_document(self):
+    def build_document(self) -> None:
 
         fd, path = tempfile.mkstemp(".pdf")
         os.close(fd)

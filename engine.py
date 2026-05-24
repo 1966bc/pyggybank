@@ -89,8 +89,8 @@ class Engine(DBMS, metaclass=_EngineMeta):
         self.log = self.get_file("log.txt")
         self.icon = self.get_file("icons/app.ico")
         self.logo = self.get_file("images/report.gif")
-        self.up_icon = self.get_file("icons/up.bmp")
-        self.down_icon = self.get_file("icons/down.bmp")
+        self.up_icon = self.get_file("icons/up.png")
+        self.down_icon = self.get_file("icons/down.png")
         self.copyleft = "GNU GPL Version 3, 29 June 2007"
         self.developer = ("hal9000\n1966bc mailto[giuseppe.costanzi@gmail.com]"
                           "\nLocation:\nMilk Galaxy\nSolar System\nThird Planet "

@@ -11,13 +11,14 @@
 
 """
 This module provides the MainFrame class for pyggybank.
-The MainFrame is Top Window of the project that contains
-all the other components.
+The MainFrame is the top window of the project and contains all the other
+components.
 """
 
 import os
 import tempfile
 import threading
+from typing import Any, Dict, List, Tuple
 
 import wx
 import wx.adv
@@ -40,19 +41,21 @@ ID_OPTIONS = wx.NewIdRef()
 
 
 class Launcher(threading.Thread):
-    def __init__(self, path, app):
+    """Open a generated file (xls) in its default app, off the GUI thread."""
+
+    def __init__(self, path: str, app: "wx.App") -> None:
         threading.Thread.__init__(self)
         self.path = path
         self.app = app
 
-    def run(self):
+    def run(self) -> None:
         self.app.engine.open_file(self.path)
 
 
 class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
-    """PyggyBank Main Window"""
+    """PyggyBank main window."""
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         wx.Frame.__init__(self,
                           None,
@@ -123,21 +126,23 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         self.lstEvents.Bind(wx.EVT_LIST_ITEM_SELECTED, self.OnItemSelected)
         self.lstEvents.Bind(wx.EVT_LIST_ITEM_ACTIVATED, self.OnItemActivated)
 
-        self.lstEvents.InsertColumn(0, 'id', width=0)
-        self.lstEvents.InsertColumn(1, 'Flow', wx.LIST_FORMAT_CENTER, width=wx.GetApp().engine.get_font() * 5)
-        self.lstEvents.InsertColumn(2, 'Suppliers', wx.LIST_FORMAT_LEFT, width=wx.GetApp().engine.get_font() * 10)
-        self.lstEvents.InsertColumn(3, 'Category', wx.LIST_FORMAT_LEFT, width=wx.GetApp().engine.get_font() * 10)
-        self.lstEvents.InsertColumn(4, 'Settled', wx.LIST_FORMAT_CENTER, width=wx.GetApp().engine.get_font() * 10)
-        self.lstEvents.InsertColumn(5, 'Reference', wx.LIST_FORMAT_CENTER, width=wx.GetApp().engine.get_font() * 10)
-        self.lstEvents.InsertColumn(6, 'Currency', wx.LIST_FORMAT_CENTER, width=wx.GetApp().engine.get_font() * 10)
-        self.lstEvents.InsertColumn(7, 'Issued', wx.LIST_FORMAT_CENTER, width=wx.GetApp().engine.get_font() * 10)
+        # event_id is not shown as a column: it is stored as the item data
+        # (see set_values) and used as the key into itemDataMap.
+        fw = wx.GetApp().engine.get_font()
+        self.lstEvents.InsertColumn(0, 'Flow', wx.LIST_FORMAT_CENTER, width=fw * 5)
+        self.lstEvents.InsertColumn(1, 'Suppliers', wx.LIST_FORMAT_LEFT, width=fw * 10)
+        self.lstEvents.InsertColumn(2, 'Category', wx.LIST_FORMAT_LEFT, width=fw * 10)
+        self.lstEvents.InsertColumn(3, 'Settled', wx.LIST_FORMAT_CENTER, width=fw * 10)
+        self.lstEvents.InsertColumn(4, 'Reference', wx.LIST_FORMAT_CENTER, width=fw * 10)
+        self.lstEvents.InsertColumn(5, 'Currency', wx.LIST_FORMAT_CENTER, width=fw * 10)
+        self.lstEvents.InsertColumn(6, 'Issued', wx.LIST_FORMAT_CENTER, width=fw * 10)
 
-        # ListCtrl columns sort
-        self.itemDataMap = {}
+        # ListCtrl columns sort (transparent PNG arrows, no colour mask needed)
+        self.itemDataMap: Dict[int, Tuple] = {}
         il = wx.ImageList(16, 16, True)
-        self.up = il.Add(wx.Bitmap(wx.GetApp().engine.up_icon, wx.BITMAP_TYPE_BMP), wx.Colour("blue"))
-        self.dn = il.Add(wx.Bitmap(wx.GetApp().engine.down_icon, wx.BITMAP_TYPE_BMP), wx.Colour("blue"))
-        wx.lib.mixins.listctrl.ColumnSorterMixin.__init__(self, 8)
+        self.up = il.Add(wx.Bitmap(wx.GetApp().engine.up_icon, wx.BITMAP_TYPE_PNG))
+        self.dn = il.Add(wx.Bitmap(wx.GetApp().engine.down_icon, wx.BITMAP_TYPE_PNG))
+        wx.lib.mixins.listctrl.ColumnSorterMixin.__init__(self, 7)
         self.lstEvents.AssignImageList(il, wx.IMAGE_LIST_SMALL)
 
         sbb = wx.StaticBox(p, wx.ID_ANY)
@@ -196,17 +201,11 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         s0.Fit(self)
         s0.SetSizeHints(self)
 
-    def OnOpen(self):
-
+    def OnOpen(self) -> None:
         self.OnClick(self.FindWindowById(wx.ID_REFRESH))
 
-    def OnClick(self, evt):
-        """Every click is management in this function
-
-            @evt : such as wx.ID_REFRESH,wx.ID_ADD and so on
-            @return: it depends by event that is called
-            @rtype: it depends by event that is called
-        """
+    def OnClick(self, evt: wx.CommandEvent) -> None:
+        """Dispatch every button/checkbox/radio click by its widget id."""
 
         if evt.GetId() == wx.ID_REFRESH:
 
@@ -322,28 +321,26 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         elif evt.GetId() == wx.ID_CLOSE:
             self.OnExit(self)
 
-    def on_date_changed(self, evt):
+    def on_date_changed(self, evt: "wx.adv.DateEvent") -> None:
         self.get_args()
 
-    def OnItemSelected(self, evt):
+    def OnItemSelected(self, evt: wx.CommandEvent) -> None:
 
         if evt.GetId() == ID_LIST:
             index = self.lstEvents.GetFirstSelected()
             if index != -1:
-                pk = int(evt.GetItem().GetText())
+                pk = self.lstEvents.GetItemData(index)
                 # make a dict for the selected row
                 self.selected_event = wx.GetApp().engine.get_selected('events', 'event_id', pk)
 
         elif evt.GetId() == ID_COMBO:
             self.get_args()
 
-    def OnItemActivated(self, evt):
+    def OnItemActivated(self, evt: wx.ListEvent) -> None:
         self.OnClick(self.FindWindowById(wx.ID_EDIT))
 
-    def get_args(self):
-        """get arguments to populate ListCtrl
-           call self.get_values
-        """
+    def get_args(self) -> None:
+        """Collect the filter widgets state and (re)populate the ListCtrl."""
 
         self.args = (self.get_state(self.FindWindowById(ID_FLOW).Get3StateValue()),
                      self.get_state(self.FindWindowById(ID_SETTLED).Get3StateValue()),
@@ -353,16 +350,14 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
 
         self.get_values((ID_LIST, True, wx.GetApp().engine.dict_queries['flows'], self.args))
 
-    def get_values(self, args):
-        """This function make callback to database and return a recordeset
+    def get_values(self, args: Tuple) -> None:
+        """
+        Run a query and route the result.
 
-            @param name: args
-                         args[0]: widget id,
-                         args[1]: True/False = fetchall/fetchone
-                         args[2]: sql statement
-                         args[3]: sql arguments
-            @return: recordset
-            @rtype: tuple
+        Args:
+            args[0]: widget id, args[1]: fetchall/fetchone,
+            args[2]: sql statement, args[3]: sql arguments.
+            wx.ID_PREVIEW builds the PDF report; anything else fills a widget.
         """
 
         rs = wx.GetApp().engine.read(args[1], args[2], args[3])
@@ -373,7 +368,8 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         else:
             self.set_values(args[0], rs)
 
-    def set_values(self, which, rs):
+    def set_values(self, which: int, rs: List[Dict[str, Any]]) -> None:
+        """Fill the events ListCtrl (and wallet totals) or the filter combo."""
 
         if which == ID_LIST:
             self.rs = rs
@@ -383,24 +379,25 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
             self.stEvents.SetLabel("Events %s" % (len(rs)))
 
             for i in rs:
-                index = self.lstEvents.InsertItem(self.lstEvents.GetItemCount(), str(i["event_id"]))
-                self.lstEvents.SetItem(index, 1, str(i["flow"]))
-                self.lstEvents.SetItem(index, 2, str(i["supplier"]).strip())
-                self.lstEvents.SetItem(index, 3, str(i["category"]).strip())
-                self.lstEvents.SetItem(index, 4, str(i["settled"]))
-                self.lstEvents.SetItem(index, 5, str(i["reference"]))
+                index = self.lstEvents.InsertItem(self.lstEvents.GetItemCount(), str(i["flow"]))
+                self.lstEvents.SetItem(index, 1, str(i["supplier"]).strip())
+                self.lstEvents.SetItem(index, 2, str(i["category"]).strip())
+                self.lstEvents.SetItem(index, 3, str(i["settled"]))
+                self.lstEvents.SetItem(index, 4, str(i["reference"]))
                 # if flow = 1 add to wallet
                 if i["flow"]:
                     self.wallet_in += i["bill"]
                 else:
                     self.wallet_out += i["bill"]
-                self.lstEvents.SetItem(index, 6, str(i["bill"]))
-                self.lstEvents.SetItem(index, 7, str(i["issued"]))
+                self.lstEvents.SetItem(index, 5, str(i["bill"]))
+                self.lstEvents.SetItem(index, 6, str(i["issued"]))
 
-                self.lstEvents.SetItemData(index, index)
-                self.itemDataMap[index] = (i["event_id"], i["flow"], i["supplier"],
-                                           i["category"], i["settled"], i["reference"],
-                                           i["bill"], i["issued"])
+                # store event_id as item data: it is the key into itemDataMap
+                # (used by ColumnSorterMixin) and how we recover the PK on click
+                self.lstEvents.SetItemData(index, i["event_id"])
+                self.itemDataMap[i["event_id"]] = (i["flow"], i["supplier"], i["category"],
+                                                   i["settled"], i["reference"], i["bill"],
+                                                   i["issued"])
             # keep a reference to selected row
             if self.lst_transactions is not None:
                 self.lstEvents.Select(self.lst_transactions, 1)
@@ -421,8 +418,8 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
                     data = str(values[1]).strip()
                     self.cbFilter.Append(data, (pk, data))
 
-    def get_state(self, state):
-        """return the correct value by Get3StateValue"""
+    def get_state(self, state: int) -> Any:
+        """Map a 3-state checkbox value to a SQL LIKE argument."""
         if state == 0:
             state = '%'
         elif state == 1:
@@ -432,31 +429,34 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
 
         return state
 
-    def get_combo_filter(self):
-        """Which combo data are selected?..if are
-
-            @return: pk of supppliers or categories
-            @rtype: int,str
+    def get_combo_filter(self) -> Tuple[Any, Any]:
         """
+        Return the (supplier_id, category_id) LIKE arguments from the combo.
 
-        if self.rbOptions.GetSelection() == 0:
-            supplier_id = '%'
-            category_id = '%'
-        else:
-            s = int(self.cbFilter.GetSelection())
-            data = self.cbFilter.GetClientData(s)
-            combo_id = int(data[0])
+        '%' means "no filter". When the radio box selects a category/supplier
+        filter but no combo item is chosen yet (GetSelection() == -1), fall
+        back to no filter instead of crashing on GetClientData(-1).
+        """
+        supplier_id: Any = '%'
+        category_id: Any = '%'
 
-            if self.rbOptions.GetSelection() == 1:
-                supplier_id = '%'
-                category_id = combo_id
-            elif self.rbOptions.GetSelection() == 2:
-                supplier_id = combo_id
-                category_id = '%'
+        option = self.rbOptions.GetSelection()
+        if option == 0:
+            return supplier_id, category_id
+
+        selection = self.cbFilter.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return supplier_id, category_id
+
+        combo_id = int(self.cbFilter.GetClientData(selection)[0])
+        if option == 1:
+            category_id = combo_id
+        elif option == 2:
+            supplier_id = combo_id
 
         return supplier_id, category_id
 
-    def menuCategories(self, evt):
+    def menuCategories(self, evt: wx.CommandEvent) -> None:
 
         # checks if there's already an instance
         if wx.GetApp().engine.match_instance('filters') is True:
@@ -468,7 +468,7 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         obj.Show()
         obj.Center()
 
-    def menuSuppliers(self, evt):
+    def menuSuppliers(self, evt: wx.CommandEvent) -> None:
 
         # checks if there's already an instance
         if wx.GetApp().engine.match_instance('filters') is True:
@@ -480,13 +480,13 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         obj.Show()
         obj.Center()
 
-    def GetListCtrl(self):
+    def GetListCtrl(self) -> wx.ListCtrl:
         return self.lstEvents
 
-    def GetSortImages(self):
+    def GetSortImages(self) -> Tuple[int, int]:
         return (self.dn, self.up)
 
-    def OnRead(self, evt):
+    def OnRead(self, evt: wx.CommandEvent) -> None:
         try:
             with open('readme', "r") as f:
                 msg = f.read()
@@ -498,7 +498,7 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         dlg = wx.lib.dialogs.ScrolledMessageDialog(self, msg, "Read me")
         dlg.ShowModal()
 
-    def OnAbout(self, evt):
+    def OnAbout(self, evt: wx.CommandEvent) -> None:
 
         info = wx.adv.AboutDialogInfo()
         info.Name = wx.GetApp().engine.title
@@ -510,14 +510,14 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
 
         wx.adv.AboutBox(info)
 
-    def OnLicence(self, evt):
+    def OnLicence(self, evt: wx.CommandEvent) -> None:
 
         with open(os.path.join(os.getcwd(), "copying"), "r") as f:
             msg = f.read()
         dlg = wx.lib.dialogs.ScrolledMessageDialog(self, msg, 'Copyleft')
         dlg.ShowModal()
 
-    def OnOpenLogFile(self, evt):
+    def OnOpenLogFile(self, evt: wx.CommandEvent) -> None:
         try:
             with open(wx.GetApp().engine.log, "r") as f:
                 msg = f.read()
@@ -529,7 +529,7 @@ class MainFrame(wx.Frame, wx.lib.mixins.listctrl.ColumnSorterMixin):
         dlg = wx.lib.dialogs.ScrolledMessageDialog(self, msg, "Log file")
         dlg.ShowModal()
 
-    def OnExit(self, evt):
+    def OnExit(self, evt) -> None:
         msg = "Quit me?"
         ret = wx.MessageBox(msg, wx.GetApp().GetAppName(),
                             wx.YES_NO | wx.ICON_QUESTION | wx.CENTRE | wx.NO_DEFAULT)

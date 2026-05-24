@@ -15,6 +15,7 @@ on database
 """
 
 import datetime
+from typing import Dict, Optional, Tuple
 
 import wx
 import wx.adv
@@ -25,7 +26,7 @@ ID_CATEGORIES = wx.NewIdRef()
 
 
 class Dialog(wx.Dialog):
-    def __init__(self, parent):
+    def __init__(self, parent) -> None:
         wx.Dialog.__init__(self, parent, wx.ID_ANY, name='update_event')
 
         # set some frame properties
@@ -125,7 +126,7 @@ class Dialog(wx.Dialog):
         s0.Fit(self)
         s0.SetSizeHints(self)
 
-    def OnOpen(self, selected_event=None):
+    def OnOpen(self, selected_event: Optional[Dict] = None) -> None:
 
         self.dict_suppliers = {}
         self.dict_category = {}
@@ -158,7 +159,7 @@ class Dialog(wx.Dialog):
             self.ckEnable.SetValue(True)
             self.ckSettled.SetValue(True)
 
-    def GetValue(self):
+    def GetValue(self) -> Tuple:
 
         return (self.ckFlow.GetValue(),
                 wx.GetApp().engine.get_combo_id(self, ID_SUPPLIERS),
@@ -172,7 +173,7 @@ class Dialog(wx.Dialog):
                 datetime.datetime.now(),
                 self.ckEnable.GetValue(),)
 
-    def OnClick(self, event):
+    def OnClick(self, event: wx.CommandEvent) -> None:
 
         if event.GetId() == wx.ID_SAVE:
 
@@ -203,10 +204,10 @@ class Dialog(wx.Dialog):
         elif event.GetId() == wx.ID_CLOSE:
             self.Destroy()
 
-    def OnExit(self, event):
+    def OnExit(self, event) -> None:
         self.OnClick(self.FindWindowById(wx.ID_CLOSE))
 
-    def OnFieldsControl(self):
+    def OnFieldsControl(self) -> Optional[int]:
 
         d = {self.cbSuppliers: self.stSupplier.GetLabel(),
              self.cbCategories: self.stCategory.GetLabel(),
