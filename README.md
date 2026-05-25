@@ -1,5 +1,11 @@
 # PyggyBank 3.0
 
+[![Release](https://img.shields.io/github/v/release/1966bc/pyggybank)](https://github.com/1966bc/pyggybank/releases/latest)
+[![License: GPL v3](https://img.shields.io/github/license/1966bc/pyggybank)](LICENSE)
+![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![wxPython](https://img.shields.io/badge/wxPython-4.2-blue)
+![SQLite](https://img.shields.io/badge/SQLite-3-blue)
+
 A small desktop "piggy bank" / personal cash-flow manager: record money **in**
 and **out**, tag each entry with a supplier and a category, filter the ledger,
 and print it to PDF or export it to Excel.
