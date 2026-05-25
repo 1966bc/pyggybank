@@ -1,5 +1,6 @@
 # PyggyBank 3.0
 
+[![tests](https://github.com/1966bc/pyggybank/actions/workflows/tests.yml/badge.svg)](https://github.com/1966bc/pyggybank/actions/workflows/tests.yml)
 [![Release](https://img.shields.io/github/v/release/1966bc/pyggybank)](https://github.com/1966bc/pyggybank/releases/latest)
 [![License: GPL v3](https://img.shields.io/github/license/1966bc/pyggybank)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)

@@ -1,0 +1,30 @@
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # wxPython is heavy to build from source, so use the distro's prebuilt
+      # package (mirrors the local "venv --system-site-packages" setup).
+      - name: Install system wxPython + xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-wxgtk4.0 python3-venv xvfb
+
+      - name: Create venv and install test deps
+        run: |
+          python3 -m venv --system-site-packages .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install reportlab openpyxl pytest
+
+      # the suite doesn't open a wx.App, but run under a virtual display so it
+      # stays green even if a future test constructs widgets.
+      - name: Run tests
+        run: xvfb-run -a .venv/bin/python -m pytest -q
