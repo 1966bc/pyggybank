@@ -24,6 +24,7 @@ def test_pdf_built_without_app():
         title="PyggyBank",
         logo=os.path.join(ROOT, "images", "report.gif"),
         start_date=datetime.datetime(2020, 1, 1),
+        end_date=datetime.datetime(2020, 12, 31),
         category="No select",
         supplier="No select",
         records=len(ROWS))

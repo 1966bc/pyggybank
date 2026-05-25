@@ -36,6 +36,7 @@ class ReportHeader:
     title: str
     logo: str
     start_date: datetime.datetime
+    end_date: datetime.datetime
     category: str
     supplier: str
     records: int
@@ -65,11 +66,12 @@ class GeneratePDF:
 
         t = Table((('Data Report', '', [logo]),
                    ("Start Date", self.header.start_date.strftime('%d/%m/%Y'), ''),
+                   ("End Date", self.header.end_date.strftime('%d/%m/%Y'), ''),
                    ("Category", self.header.category, ''),
                    ("Supplier", self.header.supplier, ''),
                    ("Records", self.header.records, '')),
                   (80, 80, 250),
-                  (18, 18, 18, 18, 18,))
+                  (18, 18, 18, 18, 18, 18,))
         t.setStyle(TableStyle([('SPAN', (2, 0), (2, -1)),
                                ('BOX', (0, 1), (1, -1), 0.5, colors.lightgrey),
                                ('LINEABOVE', (0, -1), (1, -1), 0.5, colors.lightgrey),

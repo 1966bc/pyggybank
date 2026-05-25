@@ -8,7 +8,10 @@
 - ✅ N2/N3 — dialoghi via Controller (dati per nome, dict); rinominati
   `update_filter`→`lookup_editor`, `filters`→`lookup_manager`
 - ✅ N1 — SQL fuori dal codice: `queries.json` caricato da Engine
-- ⏳ N4/N5 — filtri sovraccarichi (combo polimorfica, stack filtri)
+- ✅ N4/N5 — filtri ridisegnati: estratto `FilterPanel` (Periodo/Movimento/Dimensioni),
+  via la combo polimorfica (2 combo indipendenti), tri-stato → RadioBox espliciti,
+  `start_date`→periodo `BETWEEN` da/a con preset Mese/Anno/Tutto, `enabled` fuori dalla
+  barra (toggle menu "Show disabled"); `MainPresenter.apply_filter(FlowFilter)`
 - ✅ N7-bis — report disaccoppiato: GeneratePDF(rows, ReportHeader), niente app/engine
 - ⏳ docs/test: README 3.0, espandere pytest
 

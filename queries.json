@@ -1,11 +1,14 @@
 {
-  "flows": "SELECT event_id, flow, supplier, category, settled, reference, bill, strftime('%d-%m-%Y', issued) AS issued FROM flows WHERE flow LIKE ? AND settled LIKE ? AND enable LIKE ? AND supplier_id LIKE ? AND category_id LIKE ? AND issued >= ? ORDER BY issued DESC",
-  "report": "SELECT supplier, category, reference, flow, settled, strftime('%d-%m-%Y', issued) AS issued, bill FROM flows WHERE flow LIKE ? AND settled LIKE ? AND enable LIKE ? AND supplier_id LIKE ? AND category_id LIKE ? AND issued >= ? ORDER BY issued DESC",
+  "flows": "SELECT event_id, flow, supplier, category, settled, reference, bill, strftime('%d-%m-%Y', issued) AS issued FROM flows WHERE flow LIKE ? AND settled LIKE ? AND enable LIKE ? AND supplier_id LIKE ? AND category_id LIKE ? AND issued BETWEEN ? AND ? ORDER BY issued DESC",
+  "report": "SELECT supplier, category, reference, flow, settled, strftime('%d-%m-%Y', issued) AS issued, bill FROM flows WHERE flow LIKE ? AND settled LIKE ? AND enable LIKE ? AND supplier_id LIKE ? AND category_id LIKE ? AND issued BETWEEN ? AND ? ORDER BY issued DESC",
   "suppliers": "SELECT * FROM suppliers ORDER BY supplier",
   "categories": "SELECT * FROM categories ORDER BY category",
   "cbo_suppliers": "SELECT * FROM suppliers WHERE enable = 1 ORDER BY supplier",
   "cbo_categories": "SELECT * FROM categories WHERE enable = 1 ORDER BY category",
   "category": "SELECT category FROM categories WHERE category_id = ?",
   "supplier": "SELECT supplier FROM suppliers WHERE supplier_id = ?",
-  "delete_transaction": "DELETE FROM events WHERE event_id = ?"
+  "delete_transaction": "DELETE FROM events WHERE event_id = ?",
+  "count_events": "SELECT COUNT(*) AS total FROM events",
+  "clear_transactions": "DELETE FROM events",
+  "reset_sequence": "DELETE FROM sqlite_sequence WHERE name = ?"
 }

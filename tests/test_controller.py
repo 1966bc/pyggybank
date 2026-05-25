@@ -50,6 +50,68 @@ def test_filter_in_flow_only(controller):
     assert all(r["flow"] == 1 for r in only_in)
 
 
+def test_flow_filter_defaults():
+    f = FlowFilter()
+    # enabled defaults to True now (everyday list hides soft-deleted rows)
+    assert f.enabled is True
+    # the issued range is wide-open by default
+    assert f.start_date == datetime.datetime(1900, 1, 1)
+    assert f.end_date == datetime.datetime(2100, 1, 1)
+
+
+def test_flow_args_carries_the_date_range(controller):
+    f = FlowFilter(start_date=datetime.datetime(2020, 1, 1),
+                   end_date=datetime.datetime(2020, 12, 31))
+    args = controller.flow_args(f)
+    # order must match the BETWEEN ? AND ? at the tail of the flows query
+    assert len(args) == 7
+    assert args[-2:] == (f.start_date, f.end_date)
+
+
+def test_end_date_upper_bound_excludes_everything(controller):
+    # a range that ends before any sample data must return no rows
+    f = FlowFilter(end_date=datetime.datetime(1901, 1, 1))
+    assert controller.get_flows(f) == []
+
+
+def test_count_events_matches_unfiltered_rows(controller):
+    # show-everything filter (enabled=None) lines up with the raw count
+    shown = controller.get_flows(FlowFilter(enabled=None))
+    assert controller.count_events() == len(shown)
+
+
+def test_backup_database_creates_a_usable_copy(controller, tmp_path):
+    dest = tmp_path / "backup.db"
+    assert controller.backup_database(str(dest)) is True
+    assert dest.exists() and dest.stat().st_size > 0
+    # the copy must be a real SQLite db with the same number of events
+    import sqlite3
+    con = sqlite3.connect(str(dest))
+    try:
+        copied = con.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+    finally:
+        con.close()
+    assert copied == controller.count_events()
+
+
+def test_compact_database(controller):
+    assert controller.compact_database() is True
+
+
+def test_clear_transactions_empties_the_table(controller):
+    assert controller.count_events() > 0
+    controller.clear_transactions()
+    assert controller.count_events() == 0
+    assert controller.get_flows(FlowFilter(enabled=None)) == []
+
+
+def test_clear_transactions_resets_the_id_counter(controller):
+    controller.clear_transactions()
+    new_id = controller.save_event({"reference": "FIRST", "bill": 1.0})
+    # the AUTOINCREMENT counter was reset, so the first new row is id 1
+    assert new_id == 1
+
+
 def test_save_get_delete_round_trip(controller):
     before = len(controller.get_flows(FlowFilter()))
     # named record: order is irrelevant, SQL is built from the keys

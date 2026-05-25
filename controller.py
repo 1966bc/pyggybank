@@ -41,7 +41,8 @@ class Controller:
                 self._flag(f.enabled),
                 f.supplier_id,
                 f.category_id,
-                f.start_date)
+                f.start_date,
+                f.end_date)
 
     def get_flows(self, f: FlowFilter) -> List[Dict[str, Any]]:
         """Return the events list (for the main grid) matching the filter."""
@@ -86,6 +87,31 @@ class Controller:
 
     def delete_event(self, event_id: int) -> Optional[int]:
         return self.db.write(self.db.dict_queries['delete_transaction'], (event_id,))
+
+    # ------------------------------------------------------------------ #
+    # database maintenance
+    # ------------------------------------------------------------------ #
+    def count_events(self) -> int:
+        """How many transactions are stored (0 when empty or on error)."""
+        row = self.db.read(False, self.db.dict_queries['count_events'])
+        return row['total'] if row else 0
+
+    def backup_database(self, dest_path: str) -> bool:
+        """Save a consistent copy of the database to dest_path."""
+        return self.db.backup(dest_path)
+
+    def compact_database(self) -> bool:
+        """Reclaim free space in the database file (VACUUM)."""
+        return self.db.vacuum()
+
+    def clear_transactions(self) -> Optional[int]:
+        """
+        Delete every transaction and reset the AUTOINCREMENT counter, so the
+        next event_id restarts from 1. Returns the affected rowcount.
+        """
+        affected = self.db.write(self.db.dict_queries['clear_transactions'])
+        self.db.write(self.db.dict_queries['reset_sequence'], ('events',))
+        return affected
 
     # ------------------------------------------------------------------ #
     # lookup tables (categories / suppliers)

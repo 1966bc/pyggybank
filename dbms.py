@@ -160,6 +160,44 @@ class DBMS:
                 cursor.close()
 
     # ------------------------------------------------------------------ #
+    # maintenance
+    # ------------------------------------------------------------------ #
+    def backup(self, dest_path: str) -> bool:
+        """
+        Write a consistent copy of the database to dest_path.
+
+        Uses the SQLite online-backup API, so it is safe even with the
+        connection open. Returns True on success, False on error.
+        """
+        dest = None
+        try:
+            self._ensure_connection()
+            if self.con is None:
+                raise RuntimeError("No active DB connection")
+            dest = sqlite3.connect(dest_path)
+            with dest:
+                self.con.backup(dest)
+            return True
+        except Exception as e:
+            self._log(e)
+            return False
+        finally:
+            if dest is not None:
+                dest.close()
+
+    def vacuum(self) -> bool:
+        """Compact the database file (reclaim free pages). True on success."""
+        try:
+            self._ensure_connection()
+            if self.con is None:
+                raise RuntimeError("No active DB connection")
+            self.con.execute("VACUUM")
+            return True
+        except Exception as e:
+            self._log(e)
+            return False
+
+    # ------------------------------------------------------------------ #
     # helpers
     # ------------------------------------------------------------------ #
     def get_selected(self, table: str, field: str, value: Any) -> Optional[Dict[str, Any]]:

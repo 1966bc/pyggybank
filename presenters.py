@@ -73,6 +73,11 @@ class MainPresenter:
             setattr(self.filter, key, value)
         self.refresh()
 
+    def apply_filter(self, new_filter: FlowFilter) -> None:
+        """Replace the whole filter (built by the view's FilterPanel) and reload."""
+        self.filter = new_filter
+        self.refresh()
+
     def refresh(self) -> None:
         """Re-query, recompute totals and ask the view to render."""
         self.rows = self.controller.get_flows(self.filter)
@@ -116,12 +121,31 @@ class MainPresenter:
         supplier = ('No select' if self.filter.supplier_id == '%'
                     else self.controller.supplier_name(self.filter.supplier_id))
         return {'start_date': self.filter.start_date,
+                'end_date': self.filter.end_date,
                 'category': category,
                 'supplier': supplier}
 
     def export_xlsx(self, path: str) -> str:
         """Write the current rows to an xlsx file via the XlsExporter."""
         return XlsExporter().export(self.rows, path)
+
+    # ------------------------------------------------------------------ #
+    # database maintenance (the view's Database menu forwards here)
+    # ------------------------------------------------------------------ #
+    def event_count(self) -> int:
+        return self.controller.count_events()
+
+    def backup_database(self, dest_path: str) -> bool:
+        return self.controller.backup_database(dest_path)
+
+    def compact_database(self) -> bool:
+        return self.controller.compact_database()
+
+    def clear_transactions(self) -> Optional[int]:
+        """Wipe all transactions, then reload the (now empty) list."""
+        affected = self.controller.clear_transactions()
+        self.refresh()
+        return affected
 
     # ------------------------------------------------------------------ #
     # actions
@@ -147,7 +171,10 @@ class MainPresenter:
     def _compute_totals(self) -> None:
         win = sum(r['bill'] for r in self.rows if r['flow'])
         wout = sum(r['bill'] for r in self.rows if not r['flow'])
-        self.totals = {'in': win, 'out': wout, 'wallet': win - wout}
+        # round to cents: float sums drift (e.g. -1128.529999999...)
+        self.totals = {'in': round(win, 2),
+                       'out': round(wout, 2),
+                       'wallet': round(win - wout, 2)}
 
     @staticmethod
     def _to_datetime(value: Any) -> datetime.datetime:
