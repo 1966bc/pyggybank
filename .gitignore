@@ -12,6 +12,7 @@ venv/
 log.txt
 client_lock
 pics/
+pyggy-*.db
 
 # OS
 .DS_Store

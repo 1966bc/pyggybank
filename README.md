@@ -7,9 +7,25 @@ and print it to PDF or export it to Excel.
 Built with **Python 3 + wxPython 4 (Phoenix)**, **SQLite**, **ReportLab** and
 **openpyxl**.
 
+![PyggyBank 3.0 main window](images/pyggybank-3.0.png)
+
 > Version 3.0 is a full port of the original 2017 codebase (Python 2 + wxPython
 > 2.8 Classic) **and** an architectural refactor to a clean MVP design. See the
 > changelog at the bottom.
+
+## Features
+
+* **Ledger** of transactions in a fast virtual `ListCtrl`, click a header to sort.
+* **Filters**, grouped by family in a dedicated bar:
+  * **Period** — a *From / To* range with one-click presets (Month, Year, All).
+  * **Movement** — Type (All / In / Out) and State (All / Settled / Pending).
+  * **Dimensions** — independent Category and Supplier combos (combinable).
+  * *Show disabled* (View menu) reveals soft-deleted rows; they are hidden by default.
+* **Running totals** (In / Out / Wallet) in the status bar, rounded to cents.
+* **CRUD** on transactions; manage the Category / Supplier lookup tables.
+* **PDF report** (ReportLab) and **Excel export** (openpyxl).
+* **Database maintenance** (File ▸ Database): Backup (online copy), Compact
+  (VACUUM), and Clear transactions (wipes the ledger and resets the id counter).
 
 ## Architecture (Model–View–Presenter)
 
@@ -22,21 +38,23 @@ layer. Data access is fully decoupled from presentation.
  MainFrame  ── intent ──►  MainPresenter ──►  Controller ──►  DBMS ──►  SQLite
    (implements MainView)     (filters, totals,   (get_flows,    (connection,
    virtual ListCtrl          sorting; no wx)     save_event,    read/write,
- dialogs / lookup editor                         lookups…)      build_sql)
- XlsExporter, GeneratePDF  ◄──── data by name (dicts) ─────►     SQL from queries.json
+   FilterPanel                                   lookups…)      build_sql)
+ dialogs / lookup editor   ◄──── data by name (dicts) ─────►    SQL from queries.json
+ XlsExporter, GeneratePDF
 ```
 
 | Module | Responsibility |
 |--------|----------------|
 | `pyggy.py` | launcher + dependency injection (`Engine → Controller → MainPresenter → MainFrame`) |
-| `dbms.py` | `DBMS`: SQLite connection, `read`/`write`, `build_sql`, SQL-identifier validation, **dict rows** |
+| `dbms.py` | `DBMS`: SQLite connection, `read`/`write`, `build_sql`, SQL-identifier validation, backup/vacuum, **dict rows** |
 | `engine.py` | `Engine(DBMS)` singleton; loads `queries.json`; UI services (icon, font, calendar, dialogs) + `log.txt` logging |
-| `controller.py` | domain layer: `get_flows`, `save_event`, lookup CRUD, name resolution |
-| `models.py` | `FlowFilter` value object |
+| `controller.py` | domain layer: `get_flows`, `save_event`, lookup CRUD, name resolution, DB maintenance |
+| `models.py` | `FlowFilter` value object (movement, dimensions, date range) |
 | `presenters.py` | `MainPresenter` (pure, testable) + `MainView` protocol |
 | `exporters.py` | `XlsExporter` (openpyxl, pure) |
 | `reports/rpt_flows.py` | `GeneratePDF` + `ReportHeader` (ReportLab, no app reference) |
-| `frames/main.py` | `MainFrame` — passive view, virtual `ListCtrl` |
+| `frames/main.py` | `MainFrame` — passive view, virtual `ListCtrl`, menus |
+| `frames/filter_panel.py` | `FilterPanel` — the grouped filter bar; builds a `FlowFilter` |
 | `frames/update_data.py` | add / edit an event |
 | `frames/lookup_manager.py` | list & manage categories / suppliers |
 | `frames/lookup_editor.py` | add / edit one category or supplier |
@@ -74,7 +92,7 @@ The window follows your desktop's GTK theme (light or dark) — that is intended
 
 The presenter, exporter and report tests run with **no wxPython and no
 database** (the payoff of the MVP split); the controller/DBMS tests run against
-an in-memory or throwaway SQLite copy.
+a throwaway SQLite copy.
 
 ## Changelog
 
@@ -86,6 +104,13 @@ an in-memory or throwaway SQLite copy.
 * Virtual `ListCtrl`; dict-based rows; SQL moved to `queries.json`.
 * Export (XLS) and the PDF report extracted into standalone, app-independent
   services.
+* **Filters redesigned** into a `FilterPanel` grouped by Period / Movement /
+  Dimensions: a From/To date range with Month/Year/All presets, explicit
+  In/Out and Settled/Pending choices, and independent Category/Supplier combos
+  (replacing the old polymorphic combo and tri-state checkboxes).
+* **Menus restructured** (File / Edit / View / Manage / ?) mirroring the action
+  buttons, with a File ▸ Database submenu for backup / compact / clear.
+* Running totals rounded to cents.
 * Type hints, docstrings, `on_log` → `log.txt`, and a pytest suite.
 
 ### 2.3 (historical, Python 2 / wxPython 2.8)
